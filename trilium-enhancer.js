@@ -728,7 +728,7 @@ function enhanceLinks(container = document) {
     // Enhance links outside of #childLinks
     const links = container.querySelectorAll('#main a');
     links.forEach(async (link) => {
-        if (!link.closest('#childLinks')) {
+        if (!link.closest('#childLinks') && !link.closest('.content-card')) {
             const url = link.href;
             const title = link.textContent.trim();
             
