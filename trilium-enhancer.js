@@ -17,11 +17,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Style improvements
     enhanceStyling();
+
+    // Enhance links
+    enhanceLinks();
 });
 
 // Clean all links on the page
-function cleanAllLinks() {
-    const links = document.querySelectorAll('a');
+function cleanAllLinks(container = document) {
+    const links = container.querySelectorAll('a');
     links.forEach(link => {
         link.textContent = cleanLinkText(link.textContent.trim());
     });
@@ -75,9 +78,9 @@ function cleanLinkText(text) {
 }
 
 // Navigation enhancements
-function enhanceNavigation() {
+function enhanceNavigation(container = document) {
     // Clean all navigation links first
-    const nav = document.querySelector('nav#menu');
+    const nav = container.querySelector('nav#menu');
     if (nav) {
         // Clean all links in the navigation
         const links = nav.querySelectorAll('a');
@@ -179,11 +182,12 @@ function enhanceNavigation() {
 }
 
 // Add smooth scrolling
-function addSmoothScrolling() {
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+function addSmoothScrolling(container = document) {
+    // Add smooth scrolling to all links
+    container.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
-            document.querySelector(this.getAttribute('href')).scrollIntoView({
+            container.querySelector(this.getAttribute('href')).scrollIntoView({
                 behavior: 'smooth'
             });
         });
@@ -191,7 +195,7 @@ function addSmoothScrolling() {
 }
 
 // Styling enhancements
-// Content cache to store fetched content
+// Content cache to store both original and fetched content
 const contentCache = new Map();
 
 function fetchPageContent(url) {
@@ -303,7 +307,7 @@ function createCardElement(url, title, content) {
     return card;
 }
 
-function enhanceStyling() {
+function enhanceStyling(container = document) {
     const style = document.createElement('style');
     style.textContent = `
         /* Dark mode styles */
@@ -660,6 +664,37 @@ function enhanceStyling() {
             padding: 24px;
         }
 
+        .back-button {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            padding: 8px 16px;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 4px;
+            color: #333;
+            text-decoration: none;
+            font-size: 14px;
+            z-index: 1000;
+            transition: all 0.2s ease;
+        }
+
+        .dark-mode .back-button {
+            background: #2d2d2d;
+            border-color: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .back-button:hover {
+            background: #f5f5f5;
+            border-color: rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
+
+        .dark-mode .back-button:hover {
+            background: #3d3d3d;
+        }
+
         .page-content img {
             max-width: 100%;
             height: auto;
@@ -686,10 +721,12 @@ function enhanceStyling() {
             box-sizing: border-box;
         }
     `;
-    document.head.appendChild(style);
+    container.head.appendChild(style);
+}
 
+function enhanceLinks(container = document) {
     // Enhance links outside of #childLinks
-    const links = document.querySelectorAll('#main a');
+    const links = container.querySelectorAll('#main a');
     links.forEach(async (link) => {
         if (!link.closest('#childLinks')) {
             const url = link.href;
@@ -704,14 +741,57 @@ function enhanceStyling() {
             // Add click handler to replace content
             card.addEventListener('click', async (e) => {
                 e.preventDefault();
-                const main = document.getElementById('main');
+                const main = container.getElementById('main');
                 if (main && contentCache.has(url)) {
                     const cachedContent = contentCache.get(url);
+                    
+                    // Cache original content if not already cached
+                    if (!contentCache.has('original-' + url)) {
+                        contentCache.set('original-' + url, main.innerHTML);
+                    }
+
+                    // Add back button
+                    const backButton = document.createElement('a');
+                    backButton.className = 'back-button';
+                    backButton.href = '#';
+                    backButton.innerHTML = '← Back';
+                    backButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        // Restore original content
+                        if (document.querySelector('.page-content')) {
+                            document.querySelector('.page-content').remove();
+                        }
+                        if (document.querySelector('.back-button')) {
+                            document.querySelector('.back-button').remove();
+                        }
+                        
+                        // Restore original content
+                        if (contentCache.has('original-' + url)) {
+                            main.innerHTML = contentCache.get('original-' + url);
+                        }
+                    });
+                    document.body.appendChild(backButton);
+
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+
                     main.innerHTML = `
                         <div class="page-content">
                             ${cachedContent.html}
                         </div>
                     `;
+
+                    // Run all enhancements on the new content
+                    const newContent = document.querySelector('.page-content');
+                    if (newContent) {
+                        // Clean links in the new content
+                        const links = newContent.querySelectorAll('a');
+                        links.forEach(link => {
+                            link.textContent = cleanLinkText(link.textContent.trim());
+                        });
+                        
+                        enhanceLinks(newContent);
+                    }
                 }
             });
             
